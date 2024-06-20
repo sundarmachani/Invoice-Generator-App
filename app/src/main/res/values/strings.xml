@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Invoice Generator</string>
+    <string name="city">City</string>
+    <string name="fee">Fee</string>
+    <string name="customer_name">Customer Name</string>
+    <string name="generate_invoice">Generate Invoice</string>
+    <string name="invoice_date">Invoice Date :</string>
+    <string-array name="customer_types">
+        <item>Member</item>
+        <item>Student</item>
+        <item>Others</item>
+    </string-array>
+
+    <string-array name="payment_modes">
+        <item>Online</item>
+        <item>Offline</item>
+    </string-array>
+
+</resources>

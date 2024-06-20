@@ -1,0 +1,205 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <EditText
+        android:id="@+id/etCustomerName"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:hint="@string/customer_name" />
+
+    <EditText
+        android:id="@+id/etFee"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:hint="@string/fee"
+        android:inputType="numberDecimal" />
+
+    <Spinner
+        android:id="@+id/spCustomerType"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:entries="@array/customer_types" />
+
+    <EditText
+        android:id="@+id/etCity"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:hint="@string/city" />
+
+    <Spinner
+        android:id="@+id/spPaymentMode"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:entries="@array/payment_modes" />
+
+    <EditText
+        android:id="@+id/dateEditText"
+        android:layout_width="355dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:clickable="true"
+        android:focusable="false"
+        android:hint="Select Date"
+        android:padding="16dp" />
+
+    <Button
+        android:id="@+id/btnGenerateInvoice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/generate_invoice" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <GridLayout
+            android:id="@+id/monthsGridLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/jan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="January" />
+
+            <!-- Repeat for all months -->
+            <!-- Example for February -->
+            <TextView
+                android:id="@+id/feb"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="February" />
+
+            <TextView
+                android:id="@+id/mar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="March" />
+
+            <TextView
+                android:id="@+id/apr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="April" />
+
+            <TextView
+                android:id="@+id/may"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="May" />
+
+            <TextView
+                android:id="@+id/jun"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="June" />
+
+            <TextView
+                android:id="@+id/jul"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="July" />
+
+            <TextView
+                android:id="@+id/aug"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="August" />
+
+            <TextView
+                android:id="@+id/sep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Septemeber" />
+
+            <TextView
+                android:id="@+id/oct"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="October" />
+
+            <TextView
+                android:id="@+id/nov"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="November" />
+
+            <TextView
+                android:id="@+id/dec"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:background="@drawable/month_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="December" />
+        </GridLayout>
+    </ScrollView>
+
+</LinearLayout>

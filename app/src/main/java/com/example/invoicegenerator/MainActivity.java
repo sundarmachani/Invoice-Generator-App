@@ -38,6 +38,7 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
@@ -148,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
             reloadData();
         }
         Document document = new Document();
-        String filePath = Environment.getExternalStorageDirectory() + "/Invoice_" + customerName + ".pdf";
+        File filePath = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Invoice_" + customerName + ".pdf");
         try {
             PdfWriter.getInstance(document, new FileOutputStream(filePath));
             document.open();

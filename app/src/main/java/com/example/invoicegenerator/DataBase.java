@@ -5,11 +5,19 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Environment;
+import android.util.Log;
+
+import java.io.File;
 
 public class DataBase extends SQLiteOpenHelper {
 
+    private static final String TAG = "DataBase";
+
     private static final String DATABASE_NAME = "invoice.db";
     private static final int DATABASE_VERSION = 1;
+    public static final String DB_DIRECTORY = "invoice_data";
+    private static final String DB_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + DB_DIRECTORY + "/db/";
 
     private static final String TABLE_ENTRIES = "entries";
     public static final String COLUMN_ID = "id";
@@ -18,8 +26,31 @@ public class DataBase extends SQLiteOpenHelper {
     public static final String COLUMN_FEE = "fee";
     public static final String COLUMN_INVOICE_DATE = "invoice_date";
 
+    private final Context mContext;
+
     public DataBase(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        super(context, getDatabaseFile(context).getAbsolutePath(), null, DATABASE_VERSION);
+        this.mContext = context.getApplicationContext();
+        createDirectoryIfNotExist();
+        Log.d(TAG, "Database path: " + getDatabaseFile(context).getAbsolutePath());
+    }
+
+    private static File getDatabaseFile(Context context) {
+        // Use getExternalFilesDir() for scoped storage directory
+        File directory = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), DB_DIRECTORY + "/db/");
+        if (!directory.exists()) {
+            directory.mkdirs(); // Ensure directories are created
+        }
+        return new File(directory, DATABASE_NAME);
+    }
+
+    private void createDirectoryIfNotExist() {
+        File directory = new File(DB_PATH);
+        if (!directory.exists()) {
+            if (!directory.mkdirs()) {
+                Log.e(TAG, "Failed to create directory: " + DB_PATH);
+            }
+        }
     }
 
     @Override
@@ -56,7 +87,6 @@ public class DataBase extends SQLiteOpenHelper {
         }
         return result != -1;
     }
-
 
     public Cursor getAllEntries() {
         SQLiteDatabase db = this.getReadableDatabase();

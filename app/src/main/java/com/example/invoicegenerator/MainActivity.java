@@ -1,10 +1,13 @@
 package com.example.invoicegenerator;
 
+import static com.example.invoicegenerator.DataBase.DB_DIRECTORY;
+
 import android.Manifest;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -153,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
             reloadData();
         }
         Document document = new Document();
-        File filePath = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Invoice_" + customerName + ".pdf");
+        File filePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + DB_DIRECTORY + "/", "Invoice_" + customerName + ".pdf");
         try {
             PdfWriter.getInstance(document, new FileOutputStream(filePath));
             document.open();

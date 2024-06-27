@@ -7,7 +7,6 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -98,13 +97,10 @@ public class MainActivity extends AppCompatActivity {
                 DatePickerDialog datePickerDialog = new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
                     @Override
                     public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                        // Update the calendar and EditText with the selected date
                         calendar.set(year, month, dayOfMonth);
-                        if (month + 1 > 10) {
-                            dateEditText.setText(dayOfMonth + "/" + (month + 1) + "/" + year);
-                        } else {
-                            dateEditText.setText(dayOfMonth + "/0" + (month + 1) + "/" + year);
-                        }
+                        // Format the date as dd/MM/yyyy using String.format
+                        String formattedDate = String.format("%02d/%02d/%d", dayOfMonth, month + 1, year);
+                        dateEditText.setText(formattedDate);
                     }
                 }, year, month, day);
                 datePickerDialog.setTitle("Invoice Date");
@@ -192,13 +188,20 @@ public class MainActivity extends AppCompatActivity {
 
             document.add(detailsTable);
 
+            PdfPTable table = new PdfPTable(4); // 4 columns for S.No, Description, Fee, and Total Fee
+            table.setWidthPercentage(100); // Set table width to 100% of the page width
+            table.setSpacingBefore(10f); // Space before the table
+            table.setSpacingAfter(10f); // Space after the table
+
+            // Set the widths of the columns
+            float[] columnWidths = {1f, 3f, 1f, 1f}; // Adjust the widths as needed
+            table.setWidths(columnWidths);
+
             // Adding table header
-            PdfPTable table = new PdfPTable(5);
-            table.setWidthPercentage(100);
             addTableHeader(table);
 
             // Adding table rows
-            addRow(table, "1", "Monthly Fee\nPaid " + paymentMode, "1", String.valueOf(fee), String.valueOf(fee));
+            addRow(table, "1", "Monthly Fee\nPaid " + paymentMode, String.valueOf(fee), String.valueOf(fee));
 
             document.add(table);
 
@@ -243,6 +246,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void reloadData() {
+        monthTotalsMap.clear();
         for (int i = 0; i < monthsGridLayout.getChildCount(); i++) {
             TextView monthView = (TextView) monthsGridLayout.getChildAt(i);
             monthView.setOnClickListener(new View.OnClickListener() {
@@ -310,33 +314,47 @@ public class MainActivity extends AppCompatActivity {
 
     private void addTableHeader(PdfPTable table) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Stream.of("S.No", "Particulars", "Qty", "Rate", "Amount").forEach(columnTitle -> {
-                PdfPCell header = new PdfPCell();
-                header.setBackgroundColor(BaseColor.LIGHT_GRAY);
-                header.setBorderWidth(2);
-                header.setPhrase(new Phrase(columnTitle));
-                table.addCell(header);
-            });
+            Stream.of("S.No", "Description", "Fee", "Total Fee")
+                    .forEach(columnTitle -> {
+                        PdfPCell header = new PdfPCell();
+                        header.setBackgroundColor(BaseColor.LIGHT_GRAY);
+                        header.setBorderWidth(2);
+                        header.setPhrase(new Phrase(columnTitle));
+                        header.setHorizontalAlignment(Element.ALIGN_CENTER); // Center-align the header text
+                        table.addCell(header);
+                    });
         }
     }
 
-    private void addRow(PdfPTable table, String sno, String particulars, String qty, String rate, String amount) {
-        table.addCell(sno);
-        table.addCell(particulars);
-        table.addCell(qty);
-        table.addCell(rate);
-        table.addCell(amount);
+    private void addRow(PdfPTable table, String serialNumber, String description, String fee, String totalFee) {
+        PdfPCell cell;
+
+        cell = new PdfPCell(new Phrase(serialNumber));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER); // Center-align the serial number
+        table.addCell(cell);
+
+        cell = new PdfPCell(new Phrase(description));
+        cell.setHorizontalAlignment(Element.ALIGN_LEFT); // Left-align the description
+        table.addCell(cell);
+
+        cell = new PdfPCell(new Phrase(fee));
+        cell.setHorizontalAlignment(Element.ALIGN_RIGHT); // Right-align the fee
+        table.addCell(cell);
+
+        cell = new PdfPCell(new Phrase(totalFee));
+        cell.setHorizontalAlignment(Element.ALIGN_RIGHT); // Right-align the total fee
+        table.addCell(cell);
     }
 
-    private void addTotalRow(PdfPTable table, String item, String amount) {
-        PdfPCell cell1 = new PdfPCell(new Phrase(item));
-        cell1.setBorder(PdfPCell.NO_BORDER);
-        table.addCell(cell1);
+    private void addTotalRow(PdfPTable totalTable, String label, String value) {
+        PdfPCell labelCell = new PdfPCell(new Phrase(label));
+        labelCell.setBorder(PdfPCell.NO_BORDER);
+        totalTable.addCell(labelCell);
 
-        PdfPCell cell2 = new PdfPCell(new Phrase(amount));
-        cell2.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cell2.setBorder(PdfPCell.NO_BORDER);
-        table.addCell(cell2);
+        PdfPCell valueCell = new PdfPCell(new Phrase(value));
+        valueCell.setBorder(PdfPCell.NO_BORDER);
+        valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalTable.addCell(valueCell);
     }
 
     private static void addDetailsCell(PdfPTable table, String text, int alignment) {

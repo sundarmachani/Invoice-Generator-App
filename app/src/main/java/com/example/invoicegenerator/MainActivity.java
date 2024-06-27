@@ -1,21 +1,12 @@
 package com.example.invoicegenerator;
 
-import static com.example.invoicegenerator.DataBase.DB_DIRECTORY;
-
-import android.Manifest;
 import android.app.DatePickerDialog;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -26,11 +17,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -44,8 +37,6 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Collections;
@@ -58,7 +49,6 @@ import java.util.stream.Stream;
 public class MainActivity extends AppCompatActivity {
 
     private int invoiceCounter = 1;
-    private static final int STORAGE_PERMISSION_CODE = 1;
 
     private EditText etCustomerName, etFee, etCity, dateEditText;
     private Spinner spCustomerType, spPaymentMode;
@@ -69,11 +59,17 @@ public class MainActivity extends AppCompatActivity {
     private String monthName = "";
     private Map<String, Double> monthTotalsMap = new HashMap<>();
     private Set<Integer> invoiceNumberSet = new HashSet<>();
+    private FirebaseStorage firebaseStorage;
+    private StorageReference storageReference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        FirebaseApp.initializeApp(this);
+
+        firebaseStorage = FirebaseStorage.getInstance();
+        storageReference = firebaseStorage.getReference();
 
         etCustomerName = findViewById(R.id.etCustomerName);
         etFee = findViewById(R.id.etFee);
@@ -113,17 +109,11 @@ public class MainActivity extends AppCompatActivity {
         });
 
         reloadData();
-
         btnGenerateInvoice.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                if (!isStoragePermissionGranted()) {
-                    requestStoragePermission();
-                } else {
-                    // Proceed with your logic here if permission is already granted
                     generateInvoice(dataBase);
-                }
             }
         });
     }
@@ -156,9 +146,9 @@ public class MainActivity extends AppCompatActivity {
             reloadData();
         }
         Document document = new Document();
-        File filePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + DB_DIRECTORY + "/", "Invoice_" + customerName + ".pdf");
         try {
-            PdfWriter.getInstance(document, new FileOutputStream(filePath));
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            PdfWriter.getInstance(document, outputStream);
             document.open();
 
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
@@ -235,14 +225,93 @@ public class MainActivity extends AppCompatActivity {
             document.add(signatoryParagraph);
 
             document.close();
-            Toast.makeText(this, "Invoice generated successfully. File Path: " + filePath, Toast.LENGTH_LONG).show();
+            byte[] pdfBytes = outputStream.toByteArray();
+
+            // Upload PDF to Firebase Storage
+            uploadFileToFirebaseStorage(pdfBytes, customerName);
+
+            Toast.makeText(this, "Invoice generated and uploaded to Firebase Storage", Toast.LENGTH_LONG).show();
+
         } catch (DocumentException | IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error generating invoice: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Failed to generate invoice: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
+    private void uploadFileToFirebaseStorage(byte[] pdfBytes, String customerName) {
+        StorageReference storageRef = storageReference.child("invoices/" + customerName + "_invoice.pdf");
+        UploadTask uploadTask = storageRef.putBytes(pdfBytes);
+
+        uploadTask.addOnSuccessListener(taskSnapshot -> {
+            Toast.makeText(MainActivity.this, "File uploaded successfully", Toast.LENGTH_LONG).show();
+            Log.d("FirebaseStorage", "File uploaded successfully");
+            storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                String downloadUrl = uri.toString();
+                Log.d("FirebaseStorage", "Download URL: " + downloadUrl);
+            }).addOnFailureListener(e -> {
+                Toast.makeText(MainActivity.this, "Failed to retrieve download URL", Toast.LENGTH_LONG).show();
+                Log.e("FirebaseStorage", "Failed to retrieve download URL", e);
+            });
+        }).addOnFailureListener(e -> {
+            Toast.makeText(MainActivity.this, "File upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e("FirebaseStorage", "File upload failed", e);
+        });
+    }
+
+    private byte[] drawableToBytes(Drawable drawable) {
+        if (drawable instanceof BitmapDrawable) {
+            Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            return stream.toByteArray();
+        }
+        return null;
+    }
+
+    private void addTableHeader(PdfPTable table) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            Stream.of("S.No", "Description", "Qty", "Rate (INR)", "Amount (INR)").forEach(columnTitle -> {
+                PdfPCell header = new PdfPCell();
+                header.setBackgroundColor(BaseColor.LIGHT_GRAY);
+                header.setBorderWidth(2);
+                header.setPhrase(new Phrase(columnTitle));
+                table.addCell(header);
+            });
+        }
+    }
+
+    private void addRow(PdfPTable table, String... columns) {
+        for (String column : columns) {
+            table.addCell(new PdfPCell(new Phrase(column)));
+        }
+    }
+
+    private void addDetailsCell(PdfPTable table, String text, int alignment) {
+        PdfPCell cell = new PdfPCell(new Phrase(text));
+        cell.setPadding(5);
+        cell.setBorder(PdfPCell.NO_BORDER);
+        cell.setHorizontalAlignment(alignment);
+        table.addCell(cell);
+    }
+
+    private void addTotalRow(PdfPTable table, String name, String value) {
+        PdfPCell cell1 = new PdfPCell(new Phrase(name));
+        cell1.setBorder(PdfPCell.NO_BORDER);
+        table.addCell(cell1);
+
+        PdfPCell cell2 = new PdfPCell(new Phrase(value));
+        cell2.setBorder(PdfPCell.NO_BORDER);
+        table.addCell(cell2);
+    }
+
+    @Override
+    protected void onDestroy() {
+        dataBase.close();
+        super.onDestroy();
+    }
+
     private void reloadData() {
+        monthTotalsMap.clear();
         for (int i = 0; i < monthsGridLayout.getChildCount(); i++) {
             TextView monthView = (TextView) monthsGridLayout.getChildAt(i);
             monthView.setOnClickListener(new View.OnClickListener() {
@@ -287,19 +356,6 @@ public class MainActivity extends AppCompatActivity {
         if (cursor != null) {
             cursor.close();
         }
-
-    }
-
-    private String getMonthName(int month) {
-        String[] monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-        return monthNames[month];
-    }
-
-    private byte[] drawableToBytes(Drawable drawable) {
-        Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-        return stream.toByteArray();
     }
 
     private String getNextInvoiceNumber(int invoiceNumber) {
@@ -308,91 +364,8 @@ public class MainActivity extends AppCompatActivity {
         return PREFIX + String.format("%0" + PADDING + "d", invoiceCounter++);
     }
 
-    private void addTableHeader(PdfPTable table) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Stream.of("S.No", "Particulars", "Qty", "Rate", "Amount").forEach(columnTitle -> {
-                PdfPCell header = new PdfPCell();
-                header.setBackgroundColor(BaseColor.LIGHT_GRAY);
-                header.setBorderWidth(2);
-                header.setPhrase(new Phrase(columnTitle));
-                table.addCell(header);
-            });
-        }
-    }
-
-    private void addRow(PdfPTable table, String sno, String particulars, String qty, String rate, String amount) {
-        table.addCell(sno);
-        table.addCell(particulars);
-        table.addCell(qty);
-        table.addCell(rate);
-        table.addCell(amount);
-    }
-
-    private void addTotalRow(PdfPTable table, String item, String amount) {
-        PdfPCell cell1 = new PdfPCell(new Phrase(item));
-        cell1.setBorder(PdfPCell.NO_BORDER);
-        table.addCell(cell1);
-
-        PdfPCell cell2 = new PdfPCell(new Phrase(amount));
-        cell2.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        cell2.setBorder(PdfPCell.NO_BORDER);
-        table.addCell(cell2);
-    }
-
-    private static void addDetailsCell(PdfPTable table, String text, int alignment) {
-        PdfPCell cell = new PdfPCell(new Phrase(text));
-        cell.setBorder(PdfPCell.NO_BORDER);
-        cell.setHorizontalAlignment(alignment);
-        table.addCell(cell);
-    }
-
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == STORAGE_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted
-                Toast.makeText(this, "Storage Permission Granted", Toast.LENGTH_SHORT).show();
-                generateInvoice(dataBase);
-            } else {
-                // Permission denied
-                Toast.makeText(this, "Storage Permission Denied", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    private void requestStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                intent.addCategory("android.intent.category.DEFAULT");
-                intent.setData(Uri.parse(String.format("package:%s", getApplicationContext().getPackageName())));
-                startActivityForResult(intent, STORAGE_PERMISSION_CODE);
-            } catch (Exception e) {
-                Intent intent = new Intent();
-                intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivityForResult(intent, STORAGE_PERMISSION_CODE);
-            }
-        } else {
-            // Requesting permission for devices below Android 11
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-        }
-    }
-
-    private boolean isStoragePermissionGranted() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            return Environment.isExternalStorageManager();
-        } else {
-            int writePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            int readPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-            return writePermission == PackageManager.PERMISSION_GRANTED && readPermission == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        dataBase.close();
-        super.onDestroy();
+    private String getMonthName(int month) {
+        String[] monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+        return monthNames[month];
     }
 }

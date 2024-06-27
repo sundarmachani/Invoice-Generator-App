@@ -94,13 +94,10 @@ public class MainActivity extends AppCompatActivity {
                 DatePickerDialog datePickerDialog = new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
                     @Override
                     public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                        // Update the calendar and EditText with the selected date
                         calendar.set(year, month, dayOfMonth);
-                        if (month + 1 > 10) {
-                            dateEditText.setText(dayOfMonth + "/" + (month + 1) + "/" + year);
-                        } else {
-                            dateEditText.setText(dayOfMonth + "/0" + (month + 1) + "/" + year);
-                        }
+                        // Format the date as dd/MM/yyyy using String.format
+                        String formattedDate = String.format("%02d/%02d/%d", dayOfMonth, month + 1, year);
+                        dateEditText.setText(formattedDate);
                     }
                 }, year, month, day);
                 datePickerDialog.setTitle("Invoice Date");
@@ -113,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
-                    generateInvoice(dataBase);
+                generateInvoice(dataBase);
             }
         });
     }

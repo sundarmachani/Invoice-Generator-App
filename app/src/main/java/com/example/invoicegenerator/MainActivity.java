@@ -201,7 +201,11 @@ public class MainActivity extends AppCompatActivity {
             addTableHeader(table);
 
             // Adding table rows
-            addRow(table, "1", "Monthly Fee\nPaid " + paymentMode, String.valueOf(fee), String.valueOf(fee));
+            if (customerType.equals("Others")) {
+                addRow(table, "1", "Fee \nPaid " + paymentMode, String.valueOf(fee), String.valueOf(fee));
+            } else {
+                addRow(table, "1", "Monthly Fee\nPaid " + paymentMode, String.valueOf(fee), String.valueOf(fee));
+            }
 
             document.add(table);
 
